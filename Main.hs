@@ -68,7 +68,7 @@ main = runInputT (Settings noCompletion Nothing True) prog
 
     loop :: InputT IO ()
     loop = handleInterrupt loop $ do
-      str <- getInputLine "> "
+      str <- getInputLine "rpn> "
       case maybe Exit rpn str of
         Result res -> outputStrLn $ displayResult res
         DoNothing -> pure ()
