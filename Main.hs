@@ -1,10 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
 module Main where
 
-import           Control.Exception
-import           Control.Monad
+import           Control.Monad.IO.Class
 import           Data.Ratio
 import           System.Console.Haskeline
+import           System.Exit
 import           Text.Read
 
 type OpName = String
@@ -63,16 +63,16 @@ rpn =
 main :: IO ()
 main = runInputT (Settings noCompletion Nothing True) prog
   where
-    prog = handleInterrupt (outputStrLn "Exiting...") (start *> loop)
+    prog = withInterrupt (start *> loop)
     start = outputStrLn "Reverse Polish Notation calculator (Ctrl-D to exit)"
 
     loop :: InputT IO ()
-    loop = withInterrupt $ forever $ do
+    loop = handleInterrupt loop $ do
       str <- getInputLine "> "
       case maybe Exit rpn str of
         Result res -> outputStrLn $ displayResult res
         DoNothing -> pure ()
-        Exit -> throw Interrupt
+        Exit -> liftIO $ die "Exiting..."
         SyntaxError -> outputStrLn "error: invalid syntax"
         SemanticError err -> case err of
           EmptyStack op -> outputStrLn $ "error: cannot perform operation " <> op <> " on an empty stack"
@@ -80,6 +80,7 @@ main = runInputT (Settings noCompletion Nothing True) prog
           NotEnoughArguments n op -> outputStrLn $
             "error: not enough arguments, cannot apply operation " <> op <> " to just " <> displayResult n
           DivisionByZero n -> outputStrLn $ "error: cannot divide " <> displayResult n <> " by 0"
+      loop
 
     displayResult x = if denominator x == 1
       then show $ numerator x
